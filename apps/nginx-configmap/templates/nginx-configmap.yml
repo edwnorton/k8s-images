@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: {{ .Values.metadata.name }}-cfg
+    namespace: {{ .Values.metadata.namespace }}
+data:
+    nginx.conf: |
+        user  nginx;
+        worker_processes  auto;
+
+        error_log  /var/log/nginx/error.log  warn;
+        pid        /var/run/nginx.pid;
+
+        events {
+            worker_connections  1024;
+        }
+
+        http {
+            include       mime.types;
+            default_type  application/octet-stream;
+
+            log_format  access  '$remote_addr  "$http_x_forwarded_for"  [$time_local]  "$http_host"  "$request"  '
+                                '$status  "$http_referer"  "$content_type"  $upstream_addr  $upstream_status  '
+                                '$upstream_response_time  $request_time  $body_bytes_sent  "$http_user_agent"  "$http_cookie"';
+
+
+            log_format  elk_nginx_modules  '$remote_addr - $remote_user [$time_local] "$request" '
+                                           '$status $body_bytes_sent "$http_referer" "$http_cookie" '
+                                           '"$http_user_agent" "$http_x_forwarded_for"';
+
+            open_log_file_cache max=1000 inactive=60s;
+
+            access_log  /var/log/nginx/access.log  elk_nginx_modules;
+            
+            sendfile        on;
+            tcp_nodelay     on;
+
+            keepalive_timeout  65;
+            
+            gzip  on;
+            gzip_min_length  1k;
+            gzip_buffers  4  16k;
+            gzip_http_version  1.1;
+            gzip_comp_level  2;
+            gzip_types  text/plain application/x-javascript text/css application/xml;
+            gzip_vary  on;
+            autoindex  off;
+            fastcgi_connect_timeout  300;
+            fastcgi_send_timeout  300;
+            fastcgi_read_timeout  300;
+            fastcgi_buffer_size  64k;
+            fastcgi_buffers  4 64k;
+            fastcgi_busy_buffers_size  128k;
+            fastcgi_temp_file_write_size  128k;
+
+            upstream  apigateway {
+                server  {{ .Values.domain.api_ipport }};
+                server  {{ .Values.domain.api_ipport2 }};
+            }
+
+            server {
+                listen {{ .Values.service.port }};
+                server_name {{ .Values.service.host }};
+
+                location / {
+                    root /usr/share/nginx/html;
+                    index index.html index.htm;
+                    try_files $uri /index.html;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "upgrade";
+                    proxy_set_header Host $host;
+                    proxy_set_header Access-Control-Allow-Origin *;
+                    proxy_set_header Access-Control-Allow-Headers X-Requested-With;
+                    proxy_set_header Access-Control-Allow-Methods GET,POST,OPTIONS;
+                }
+                
+                location /api/ {
+                    proxy_pass http://apigateway/;
+                    proxy_cookie_domain {{ .Values.service.host }} apigateway;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "upgrade";
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                    #proxy_set_header X-Forwarded-Port $server_port;
+                    proxy_set_header HOST $host;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Prefix /api;
+                    proxy_next_upstream http_500 http_502 http_503 error timeout invalid_header;
+                    proxy_set_header Origin "";
+                }
+            }
+        }
+

@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: {{ .Values.metadata.name }}-deploy
+    namespace: {{ .Values.metadata.namespace }}
+    annotations:
+    labels:
+        app: {{ .Values.metadata.name }}
+spec:
+    replicas: {{ .Values.replicaCount }}
+    selector:
+        matchLabels:
+            app: {{ .Values.metadata.name }}
+    template:
+        metadata:
+            labels:
+                app: {{ .Values.metadata.name }}
+            annotations:
+                randomstr: {{ randAlphaNum 10 | b64enc }}
+        spec:
+            containers:
+              - name: {{ .Values.metadata.name }}-ctn
+                image: {{ .Values.image.repository }}
+                imagePullPolicy: Always
+                ports:
+                  - containerPort: {{ .Values.service.port }}
+                volumeMounts:
+                  - name: {{ .Values.metadata.name }}-nginx-conf
+                    mountPath: /etc/nginx/nginx.conf
+                    subPath: nginx.conf
+                resources:
+                  {{- toYaml .Values.resources | nindent 18 }}
+            initContainers:
+              - name: {{ .Values.metadata.name }}-init-ctn
+                image: 1.1.1.1:10001/confd:0.16
+                imagePullPolicy: Always
+                command: 
+                  - "./confd"
+                args:
+                  - "-onetime"
+                  - "-confdir"
+                  - "."
+                  - "-backend"
+                  - "consul"
+                  - "-node"
+                  - "{{ .Values.nginx_template.consul }}"
+                  - "-log-level=info" 
+                  - "-prefix"
+                  - "{{ .Values.nginx_template.apollo_prefix }}"
+                volumeMounts:
+                  - name: {{ .Values.metadata.name }}-nginx-conf
+                    mountPath: /etc/confd/target
+            volumes:
+              - name: {{ .Values.metadata.name }}-nginx-conf
+                emptyDir: {}
+
+

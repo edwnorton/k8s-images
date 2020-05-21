@@ -1,0 +1,35 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: {{ .Values.metadata.name }}
+  name: {{ .Values.metadata.name }}
+  namespace: monitoring
+spec:
+  endpoints:
+  - interval: 15s
+    port: http{{ .Values.service.port }}
+    path: prometheus_metrics
+    relabelings:
+    - action: replace
+      regex: (.*)
+      replacment: $1
+      sourceLabels:
+      - __meta_kubernetes_pod_annotation_prometheus_microservice_name
+      targetLabel: category
+  - interval: 15s
+    port: http9089
+    path: prometheus_metrics
+    relabelings:
+    - action: replace
+      regex: (.*)
+      replacment: $1
+      sourceLabels:
+      - __meta_kubernetes_pod_annotation_prometheus_middleware_name
+      targetLabel: category
+  namespaceSelector:
+    matchNames:
+    - {{ .Values.metadata.namespace }}
+  selector:
+    matchLabels:
+      app: {{ .Values.metadata.name }}

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  name: {{ .Values.metadata.name }}-deploy
+  namespace:  {{ .Values.metadata.namespace }}
+  labels: 
+    app: {{ .Values.metadata.name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.metadata.name }}
+  template:
+    metadata:
+      annotations:
+        prometheus.microservice.name: microservice
+        prometheus.middleware.name: middieware
+        randomstr: {{ randAlphaNum 10 | b64enc }}
+      labels:
+        app: {{ .Values.metadata.name }}
+    spec:
+      containers:
+      - name: {{ .Values.metadata.name }}-ctn
+        image: "{{ .Values.image.repository }}"
+        imagePullPolicy: Always
+        ports:
+        - containerPort: {{ .Values.service.port }}
+        - containerPort: 9089
+        command:
+          - java
+          - -jar
+          - -server
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+      dnsConfig:
+        nameservers:
+          - 1.1.1.1
+        searches:
+          - aaa.com
