@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+ name: gluster-pvc
+ annotations:
+   volume.beta.kubernetes.io/storage-class: gluster-heketi-external
+spec:
+ accessModes:
+  - ReadWriteOnce
+ storageClassName: gluster-heketi-external
+ resources:
+   requests:
+     storage: 1Gi
