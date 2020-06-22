@@ -1,0 +1,31 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: wordpress-mysqlceph
+  labels:
+    app: wordpressceph
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpressceph
+        tier: mysql
+    spec:
+      containers:
+      - image: fio:latest
+        imagePullPolicy: IfNotPresent
+        command: ["sleep", "10000000"]
+        name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claimceph
+      nodeSelector:
+        disktype: ssd2
+
