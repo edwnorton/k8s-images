@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: {{ .Values.metadata.name }}-deploy
+    namespace: {{ .Values.metadata.namespace }}
+    annotations:
+      checksum/config: {{ include (print $.Template.BasePath "/nginx-configmap.yml") . | sha256sum }} 
+    labels:
+        app: {{ .Values.metadata.name }}
+spec:
+    replicas: {{ .Values.replicaCount }}
+    selector:
+        matchLabels:
+            app: {{ .Values.metadata.name }}
+    template:
+        metadata:
+            labels:
+                app: {{ .Values.metadata.name }}
+            annotations:
+                checksum/config: {{ include (print $.Template.BasePath "/nginx-configmap.yml") . | sha256sum }}
+                randomstr: {{ randAlphaNum 10 | b64enc }}
+        spec:
+            containers:
+              - name: {{ .Values.metadata.name }}-ctn
+                image: {{ .Values.image.repository }}
+                imagePullPolicy: Always
+                ports:
+                  - containerPort: {{ .Values.service.port }}
+                volumeMounts:
+                  - name: {{ .Values.metadata.name }}-nginx-conf
+                    mountPath: /etc/nginx/nginx.conf
+                    subPath: nginx.conf
+                resources:
+                  {{- toYaml .Values.resources | nindent 18 }}
+            volumes:
+              - name: {{ .Values.metadata.name }}-nginx-conf
+                configMap:
+                    name: {{ .Values.metadata.name }}-cfg
+
