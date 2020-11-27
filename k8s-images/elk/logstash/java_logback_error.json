@@ -1,0 +1,38 @@
+{
+    "receivers": [
+        "https://oapi.dingtalk.com/robot/send?access_token=xxx"
+    ],
+    "dsl": {
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "range": {
+                            "@timestamp": {
+                                "gte": "now-1m",
+                                "lte": "now"
+                            }
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "log_level": "ERROR"
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "tags": "java_logback"
+                        }
+                    }
+                ],
+                "must_not": [
+                    {
+                        "match_phrase": {
+                            "log_message": "Could not find acceptable representation"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

@@ -1,0 +1,38 @@
+{
+    "receivers": [
+        "https://oapi.dingtalk.com/robot/send?access_token=xxx"
+    ],
+    "dsl": {
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "range": {
+                            "@timestamp": {
+                                "gte": "now-1m",
+                                "lte": "now"
+                            }
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "tags": "python"
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "log_level": "ERROR"
+                        }
+                    }
+                ],
+                "must_not": [
+                    {
+                        "match_phrase": {
+                            "tags": "_grokparsefailure"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}
